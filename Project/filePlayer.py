@@ -26,7 +26,7 @@ class QueueThread:
         self.lock.release()
         self.empty.release()
     
-def Exracting(filename, Cframes):
+def exracting(filename, cframes):
     count =  0 #Initialize frame count
 
     #open video file
@@ -38,7 +38,7 @@ def Exracting(filename, Cframes):
     print(f'Reading frame {count} {success}')
     while success and count < 72:
         #put frames in queue
-        Cframes.enqueue(image)
+        cframes.enqueue(image)
 
         success, image = vidcap.read()
         print(f'Reading frame {count}')
@@ -46,36 +46,36 @@ def Exracting(filename, Cframes):
         
     print('Extracting is done!')
 
-def ConvertGray(Cframes, Gframes):
+def convertGray(cframes, gframes):
     count = 0 #Initialize frame count
 
     #going through color frames
-    while not Cframes.empty():
+    while not cframes.empty():
         #receive queue frames
         print('Converting frame {count}')
 
         #get frames
-        getFrame = Cframes.dequeue()
+        getFrame = cframes.dequeue()
 
         #convert to grayscale
         grayscaleFrame = cv2.cvtColor(getFrame, cv2.COLOR_BGR2GRAY)
 
         #put gray frames in queue
-        Gframes.enqueue(grayscaleFrame)
+        gframes.enqueue(grayscaleFrame)
         
         count += 1
 
     print('Converting to gray done!')
 
-def display(Gframes):
+def display(gframes):
     count = 0 #Initialize frame count
 
     #going through gray frames
-    while not Gframes.empty():
+    while not gframes.empty():
         print(f'Displaying Frame{count}')
 
         #get next frame
-        frame = Gframe.dequeue()
+        frame = gframe.dequeue()
 
         #display image called Video
         cv2.imshow('Video', frame)
@@ -88,3 +88,22 @@ def display(Gframes):
     print('Finished with display!')
     #make sure we cleanup the windows!
     cv2.destroyAllWindows()
+
+#filename to load
+filename = '../clip.mp4'
+
+#make queues
+cframes = QueueThread()
+gframes = QueueThread()
+'''
+make each thread target each def with their parameters as the args 
+'''
+extractThread = threading.Thread(target = extract, args = (filename, cframes))
+convertThread = threading.Thread(target = convertGray, args = (cframes, gframes))
+displayThread = threading.Thread(target = display, args = (gframes,))
+
+#start each thread
+extractThread.start()
+convertThread.start()
+displayThread.start()
+        
