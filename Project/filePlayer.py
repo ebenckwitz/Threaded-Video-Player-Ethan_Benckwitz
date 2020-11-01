@@ -1,58 +1,70 @@
 #!/usr/bin/env python3
 #@Author: Ethan Benckwitz
 
-from threading import Thread
-import cv2, os
+import threading 
+import cv2, os, base64, queue
+import numpy as np
 
 
-class Exracting(Thread):
-    def __init__(self):
-        Thread.__init__(self)
-        self.vidcap = cv2.VideoCapture('clip.mp4')
-        self.count =  0
+def Exracting(filename, Cframes):
+    count =  0 #Initialize frame count
 
-    def run(self):
-        #read one frame
-        success, image = self.vidcap.read()
-        while success and self.count < 72:
-            #put frames in queue
+    #open video file
+    vidcap = cv2.VideoCapture(filename)
 
-            success, image = self.vidcap.read()
-            print(f'Reading frame {count}')
-            count += 1
-        print('Extracting is done!')
+    #read first image
+    success, image = vidcap.read()
+    
+    print(f'Reading frame {count} {success}')
+    while success and count < 72:
+        #put frames in queue
+        Cframes.enqueue(image)
 
-class ConvertGray(Thread):
-    def __init__(self):
-        Thread.__init__(self)
-        self.count = 0
-
-    def run(self):
-        while True:
-
-            #receive queue frames
-            print('Converting frame (self.count}')
-            grayscaleFrame = cv2.cvtColor(frame??, cv2.COLOR_BGR2GRAY)
-            self.count += 1
-        print('Converting to gray done!')
-
-class display(Thread):
-    def __init__(self):
-        Thread.__init__(self)
-        self.count = 0
-
-    def run(self):
-        while True:
-            print(f'Displaying Frame{self.count}')
-            #Display frame in window as 'Video'
-            cv2.imshow('Video', frame???)
-
-            #wait for 42ms and check if user wants to quit
-            if(cv2.waitKey(42) and 0xFF == ord("q"):
-               break
-
-            self.count += 1
-        print('Finished with display!')
-        #make sure we cleanup the windows!
-        cv2.destroyAllWindows()
+        success, image = vidcap.read()
+        print(f'Reading frame {count}')
+        count += 1
         
+    print('Extracting is done!')
+
+def ConvertGray(Cframes, Gframes):
+    count = 0 #Initialize frame count
+
+    #going through color frames
+    while not Cframes.empty():
+        #receive queue frames
+        print('Converting frame {count}')
+
+        #get frames
+        getFrame = Cframes.dequeue()
+
+        #convert to grayscale
+        grayscaleFrame = cv2.cvtColor(getFrame, cv2.COLOR_BGR2GRAY)
+
+        #put gray frames in queue
+        Gframes.enqueue(grayscaleFrame)
+        
+        count += 1
+
+    print('Converting to gray done!')
+
+def display(Gframes):
+    count = 0 #Initialize frame count
+
+    #going through gray frames
+    while not Gframes.empty():
+        print(f'Displaying Frame{count}')
+
+        #get next frame
+        frame = Gframe.dequeue()
+
+        #display image called Video
+        cv2.imshow('Video', frame)
+        #wait for 42ms before next frame
+        if(cv2.waitKey(42) and 0xFF == ord("q"):
+           break
+
+        count += 1
+
+    print('Finished with display!')
+    #make sure we cleanup the windows!
+    cv2.destroyAllWindows()
