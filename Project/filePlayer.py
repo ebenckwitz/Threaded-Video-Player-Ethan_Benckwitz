@@ -2,14 +2,13 @@
 #@Author: Ethan Benckwitz
 
 import threading 
-import cv2, os, base64, queue
-import numpy as np
+import cv2, os, queue
 
 class QueueThread:
     def __init__(self):
         self.queue = []
-        self.full = threading.Semaphore(24)
-        self.empty = threading.Semaphore(0)
+        self.full = threading.Semaphore(0)
+        self.empty = threading.Semaphore(24)
         self.lock = threading.Lock()
 
     def enqueue(self, item):
@@ -22,11 +21,12 @@ class QueueThread:
     def dequeue(self):
         self.full.acquire()
         self.lock.acquire()
-        frame = queue.pop(0)
+        frame = self.queue.pop(0)
         self.lock.release()
         self.empty.release()
+        return frame
     
-def exracting(filename, cframes):
+def extracting(filename, cframes):
     count =  0 #Initialize frame count
 
     #open video file
@@ -36,7 +36,7 @@ def exracting(filename, cframes):
     success, image = vidcap.read()
     
     print(f'Reading frame {count} {success}')
-    while success and count < 72:
+    while success:
         #put frames in queue
         cframes.enqueue(image)
 
@@ -45,18 +45,20 @@ def exracting(filename, cframes):
         count += 1
         
     print('Extracting is done!')
+    cframes.enqueue('!')
 
 def convertGray(cframes, gframes):
     count = 0 #Initialize frame count
 
     #going through color frames
-    while not cframes.empty():
-        #receive queue frames
+    while True:
         print('Converting frame {count}')
 
         #get frames
         getFrame = cframes.dequeue()
-
+        if getFrame == '!':
+            break
+        
         #convert to grayscale
         grayscaleFrame = cv2.cvtColor(getFrame, cv2.COLOR_BGR2GRAY)
 
@@ -66,21 +68,24 @@ def convertGray(cframes, gframes):
         count += 1
 
     print('Converting to gray done!')
-
+    gframes.enqueue('!')
+    
 def display(gframes):
     count = 0 #Initialize frame count
 
     #going through gray frames
-    while not gframes.empty():
+    while True:
         print(f'Displaying Frame{count}')
 
         #get next frame
-        frame = gframe.dequeue()
-
+        frame = gframes.dequeue()
+        if frame == '!':
+            break
+        
         #display image called Video
         cv2.imshow('Video', frame)
         #wait for 42ms before next frame
-        if(cv2.waitKey(42) and 0xFF == ord("q"):
+        if(cv2.waitKey(42) and 0xFF == ord("q")):
            break
 
         count += 1
@@ -95,10 +100,9 @@ filename = '../clip.mp4'
 #make queues
 cframes = QueueThread()
 gframes = QueueThread()
-'''
-make each thread target each def with their parameters as the args 
-'''
-extractThread = threading.Thread(target = extract, args = (filename, cframes))
+           
+#make each thread target each def with their parameters as the args 
+extractThread = threading.Thread(target = extracting, args = (filename, cframes))
 convertThread = threading.Thread(target = convertGray, args = (cframes, gframes))
 displayThread = threading.Thread(target = display, args = (gframes,))
 
