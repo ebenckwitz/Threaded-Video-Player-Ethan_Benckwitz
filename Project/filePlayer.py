@@ -8,7 +8,7 @@ class QueueThread:
     def __init__(self):
         self.queue = []
         self.full = threading.Semaphore(0)
-        self.empty = threading.Semaphore(24)
+        self.empty = threading.Semaphore(10) #allow ten frames at a time
         self.lock = threading.Lock()
 
     def enqueue(self, item):
